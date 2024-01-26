@@ -2,6 +2,10 @@
 
 Windows 内核资源管理采纳了面向对象的思想。Windows 的内核包含执行体(微)内核和 HAL三层对象管理器是执行体中的组件，主要管理执行体对象。但是，执行体对象也可能封装了一个或多个内核对象。
 
+Windows 内核提供了定义良好的，可预测操作系统语义([primitivets](https://stackoverflow.com/questions/8022399/meaning-of-primitive-in-operating-system-algorithm-context))和功能的低层基础，以便执行体层去更好的工作。内核将自身与执行体的其他部分划分开来。它几乎将所有的决策都留给执行体，除了线程调度，异常分发等一些需要与硬件交互的功能，这部分必须由内核去做。
+
+在内核之外，执行体用"对象"代表线程和其他的可共享的资源。对象需要一些额外的策略开销。例如，通过对象句柄来操作它们，或对其进行安全检查，以及在创建时需要额外使用一些资源。多数的执行体对象被封装成一个或多个内核对象，内核为这些对象定义的了它们的属性。
+
 Windows 对象管理器的基本设计意图是(参考 WRK 附带的 NT 设计文档目录
 中的ob.doc):
 
@@ -52,6 +56,8 @@ _LIST_ENTRY [ 0xffffc70a`808eb140 - 0xffffc70a`808eb140 ]
    +0x0c8 CallbackList     : _LIST_ENTRY
 ```
 
+
+**接下来以WRK源码为例子，用来更直观的理解Windows内核的工作原理**
 
 
 Windows使用了`ObCreateObjectType`来新建一个对象类型。下面展示了`ObCreateObjectType`函数的原型：

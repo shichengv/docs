@@ -1,27 +1,30 @@
-# 随笔
+# Docs
 
-一些笔记和介绍文档。这些东西会当做讲义在课程上讲解(随缘直播课)。
+一些笔记和介绍文档。这些东西会当做讲义在课程上讲解(随缘直播课)。本仓库提供了图层源文件，它们存放在`excalidraw`文件夹中。您可以下载这些源文件进行任意修改。
 
-普通大学生，喜欢计算机安全的操作系统安全和网络安全。目前还在学习计算机基础课程：
+学生，喜欢计算机安全的操作系统安全和网络安全。目前还在学习计算机基础课程：
 - [x] 操作系统
 - [ ] 计算机网络
 - [ ] 算法设计与分析
 - [ ] 编译原理
 
-**水平有限，有不足之处还请多多指正**。
+**水平有限，如果我的理解有误，希望您能快速与我取得联系**。
 
 ***
 
 ## Windows 
 ***
+- [ ] [Windows Architecture Overview](./Windows/Internals/Architecture.md)
+  在阅读其他关于Windows内核的文章之前，您应该先阅读本篇。本篇简单介绍了Windows系统的结构，以及Windows内部的构成，以及它们的作用。
+
 - [x] [Windows 对象管理](./Windows/ObjectManagement/ObjectManagement.md)
   分析Windows内核的对象管理机制，其中参考了《Windows内核原理与实现》。
 
+- [x] [深入解析Windows句柄](./Windows/Handle/Handle.md)
+  解析Windows的句柄(HANDLE)机制，以及Windows内核是如何管理，使用句柄。(建议您先阅读Windows对象管理)
+
 - [x] [Windows APC机制分析](./Windows/APC/apc.md)
   分析Windows APC(异步过程调用)机制，其中参考了《Windows内核原理与实现》。
-
-- [x] [深入解析Windows句柄](./Windows/Handle/Handle.md)
-  解析Windows的句柄(HANDLE)机制，以及Windows内核是如何管理，使用句柄。
 
 ## Linux
 
