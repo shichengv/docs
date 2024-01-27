@@ -8,105 +8,10 @@
 
 ### 编译过程
 
-下面的文件作为示例
+**本节用到了`main.c`，`vector.h`，`addvec.c`，`multvec.c`和`sum.c`文件，您可以在`src`文件夹中找到它们。**
 
-**main.c**
+main.c包含了 vector.h 文件，改头文件提供了两个函数声明。addvec.c 和 multvec.c 实现了这两个函数。main.c引用了 sum.c 文件的函数。
 
-```c
-/*    main.c    */
-
-#include "vector.h"
-#define MAX 2
-
-int sum(int *a, int n);
-int x[MAX] = {1, 2};
-int y[MAX] = {3, 4};
-int z[MAX];
-long bss;
-
-int main(){
-        addvec(x, y, z, MAX);
-        bss = sum(z, MAX);
-        return bss;
-}
-```
-
-**vector.h**
-
-```c
-/*    vector.h    */
-
-void addvec(int *x, int *y, int *z, int n);
-void multvec(int *x, int *y, int *z, int n);
-```
-
-**multvec.c**
-
-```c
-/* multvec.c */
-
-int multcnt = 0;
-void multvec(int *x, int *y, int *z, int n){
-    int i;
-    multcnt++;
-    for (i = 0; i < n; i++)
-        z[i] = x[i] * y[i];
-}
-```
-
-**addvec.c**
-
-```c
-/*    addvec.c    */
-
-int addcnt = 0;
-
-void addvec(int *x, int *y, int *z, int n){
-    int i;
-    addcnt++;
-    for (i = 0; i < n; i++) 
-        z[i] = x[i] + y[i];
-
-}
-```
-
-**sum.c**
-
-```c
-/*    sum.c    */
-
-int sum(int * a, int n){
-    int i, s = 0;
-    for (i = 0; i < n; i++){
-        s += a[i];
-    }
-    return s;
-}
-```
-
-**main2.c**
-
-```c
-/*  main2.c 后面的几节会使用这个例子    */
-#include <dlfcn.h>
-#include "vector.h"
-#define MAX 2
-
-int x[MAX] = {1, 2};
-int y[MAX] = {3, 4};
-int z[MAX];
-long plusd;
-int main(){
-        void * handle;
-        int (*sum)(int*, int);
-        addvec(x, y, z, MAX);
-        handle = dlopen("./libsum.so", RTLD_LAZY);
-        sum = (int (*)(int*, int))dlsym(handle, "sum");
-        plusd = sum(z, MAX);
-        dlclose(handle);
-        return plusd;
-}
-```
 
 使用下面这条命令来编译这些文件，可以使用 `-v` 选项来查看编译详情。
 
@@ -216,6 +121,162 @@ ld: warning: cannot find entry symbol _start; defaulting to 0000000000401000
 接着，链接器程序`ld`将`main.o`, `sum.o`, `addvec.o`, `multvec.o`以及一些必要的系统目标文件 (比如crti.o,crtbegin.o, crtend.o crtn.o等一些在执行main之前执行的代码的可重定位文件，以及一些运行时需要的库，比如C标准库，这些暂时不深入探讨，可以看下面的链接 **How Initialization Functions Are Handled** ) 组合起来，创建一个可执行的目标文件 prog。可以看到ld抛出来一条警告，这是因为在链接过程中需要添加前面介绍过的`crti.o`,`crtbegin.o`等一些必要的可重定位目标文件。
 
 当执行该文件的时候，操作系统会调用一个叫做加载器(loader)的函数(比如Linux系统库里面的 execve 函数)。将可执行文件的代码和数据复制到内存，然后跳转到程序的入口地址。
+
+在明白上面这个过程后，让我们来研究一下gcc的 `-v` 选项。`-v`选项告诉gcc输出详细的编译过程，我们使用下面这句命令来查看输出：
+```
+linux> gcc -v -Og -o prog main.c sum.c multvec.c addvec.c 
+```
+首先是第一部分：
+```
+Using built-in specs.
+COLLECT_GCC=gcc
+COLLECT_LTO_WRAPPER=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper
+OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
+OFFLOAD_TARGET_DEFAULT=1
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Debian 13.2.0-7' --with-bugurl=file:///usr/share/doc/gcc-13/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-13 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/reproducible-path/gcc-13-13.2.0/debian/tmp-nvptx/usr,amdgcn-amdhsa=/build/reproducible-path/gcc-13-13.2.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=3
+Thread model: posix
+Supported LTO compression algorithms: zlib zstd
+gcc version 13.2.0 (Debian 13.2.0-7) 
+```
+第一部分显示了当前gcc的详细信息，比如构建的目标架构`x86_64-linux-gnu`，构建选项`Configured with`的内容，线程模型`Thread model`等一些信息。
+
+下面是第二部分：
+```
+COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-dumpdir' 'prog-'
+ /usr/libexec/gcc/x86_64-linux-gnu/13/cc1 -quiet -v -imultiarch x86_64-linux-gnu main.c -quiet -dumpdir prog- -dumpbase main.c -dumpbase-ext .c -mtune=generic -march=x86-64 -Og -version -fasynchronous-unwind-tables -o /tmp/ccl5hwKR.s
+GNU C17 (Debian 13.2.0-7) version 13.2.0 (x86_64-linux-gnu)
+        compiled by GNU C version 13.2.0, GMP version 6.3.0, MPFR version 4.2.1, MPC version 1.3.1, isl version isl-0.26-GMP
+```
+`-dumpdir prog-`选项告诉gcc，使用`prog-`文件夹存放编译过程中产生的临时文件和辅助文件。gcc使用ccl程序将我们输入的第一个源文件main.c编译为`ccl5hwKR.s`，并存放在临时文件夹里。
+
+接下来三部分的行为类似：
+```
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/../../../../x86_64-linux-gnu/include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /usr/lib/gcc/x86_64-linux-gnu/13/include
+ /usr/local/include
+ /usr/include/x86_64-linux-gnu
+ /usr/include
+End of search list.
+Compiler executable checksum: 703503d3cc8534b91d53f31f2f813204
+COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-dumpdir' 'prog-'
+ as -v --64 -o /tmp/cc0mohgi.o /tmp/ccl5hwKR.s
+GNU assembler version 2.41.90 (x86_64-linux-gnu) using BFD version (GNU Binutils for Debian) 2.41.90.20240115
+COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-dumpdir' 'prog-'
+ /usr/libexec/gcc/x86_64-linux-gnu/13/cc1 -quiet -v -imultiarch x86_64-linux-gnu sum.c -quiet -dumpdir prog- -dumpbase sum.c -dumpbase-ext .c -mtune=generic -march=x86-64 -Og -version -fasynchronous-unwind-tables -o /tmp/ccl5hwKR.s
+GNU C17 (Debian 13.2.0-7) version 13.2.0 (x86_64-linux-gnu)
+        compiled by GNU C version 13.2.0, GMP version 6.3.0, MPFR version 4.2.1, MPC version 1.3.1, isl version isl-0.26-GMP
+```
+```
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/../../../../x86_64-linux-gnu/include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /usr/lib/gcc/x86_64-linux-gnu/13/include
+ /usr/local/include
+ /usr/include/x86_64-linux-gnu
+ /usr/include
+End of search list.
+Compiler executable checksum: 703503d3cc8534b91d53f31f2f813204
+COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-dumpdir' 'prog-'
+ as -v --64 -o /tmp/ccT316qm.o /tmp/ccl5hwKR.s
+GNU assembler version 2.41.90 (x86_64-linux-gnu) using BFD version (GNU Binutils for Debian) 2.41.90.20240115
+COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-dumpdir' 'prog-'
+ /usr/libexec/gcc/x86_64-linux-gnu/13/cc1 -quiet -v -imultiarch x86_64-linux-gnu multvec.c -quiet -dumpdir prog- -dumpbase multvec.c -dumpbase-ext .c -mtune=generic -march=x86-64 -Og -version -fasynchronous-unwind-tables -o /tmp/ccl5hwKR.s
+GNU C17 (Debian 13.2.0-7) version 13.2.0 (x86_64-linux-gnu)
+        compiled by GNU C version 13.2.0, GMP version 6.3.0, MPFR version 4.2.1, MPC version 1.3.1, isl version isl-0.26-GMP
+```
+```
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/../../../../x86_64-linux-gnu/include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /usr/lib/gcc/x86_64-linux-gnu/13/include
+ /usr/local/include
+ /usr/include/x86_64-linux-gnu
+ /usr/include
+End of search list.
+Compiler executable checksum: 703503d3cc8534b91d53f31f2f813204
+COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-dumpdir' 'prog-'
+ as -v --64 -o /tmp/ccsjVhIT.o /tmp/ccl5hwKR.s
+GNU assembler version 2.41.90 (x86_64-linux-gnu) using BFD version (GNU Binutils for Debian) 2.41.90.20240115
+COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-dumpdir' 'prog-'
+ /usr/libexec/gcc/x86_64-linux-gnu/13/cc1 -quiet -v -imultiarch x86_64-linux-gnu addvec.c -quiet -dumpdir prog- -dumpbase addvec.c -dumpbase-ext .c -mtune=generic -march=x86-64 -Og -version -fasynchronous-unwind-tables -o /tmp/ccl5hwKR.s
+GNU C17 (Debian 13.2.0-7) version 13.2.0 (x86_64-linux-gnu)
+        compiled by GNU C version 13.2.0, GMP version 6.3.0, MPFR version 4.2.1, MPC version 1.3.1, isl version isl-0.26-GMP
+```
+gcc使用ccl编译器分别将`sum.c`, `multvec.c` 和 `addvec.c` 编译为 `ccl5hwKR.s` 文件，然后使用汇编器将它们汇编为可重定位目标文件`cc0mohgi.o`, `ccT316qm.o` 和 `ccsjVhIT.o`。
+
+最后一部分是这样的：
+```
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/../../../../x86_64-linux-gnu/include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /usr/lib/gcc/x86_64-linux-gnu/13/include
+ /usr/local/include
+ /usr/include/x86_64-linux-gnu
+ /usr/include
+End of search list.
+Compiler executable checksum: 703503d3cc8534b91d53f31f2f813204
+COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-dumpdir' 'prog-'
+ as -v --64 -o /tmp/ccHcnfMO.o /tmp/ccl5hwKR.s
+GNU assembler version 2.41.90 (x86_64-linux-gnu) using BFD version (GNU Binutils for Debian) 2.41.90.20240115
+COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/
+LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-dumpdir' 'prog.'
+ /usr/libexec/gcc/x86_64-linux-gnu/13/collect2 -plugin /usr/libexec/gcc/x86_64-linux-gnu/13/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper -plugin-opt=-fresolution=/tmp/ccFUMMrw.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o prog /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/13 -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/13/../../.. /tmp/cc0mohgi.o /tmp/ccT316qm.o /tmp/ccsjVhIT.o /tmp/ccHcnfMO.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o
+COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-dumpdir' 'prog.'
+```
+在最后一部分我们可以看到这行输出`as -v --64 -o /tmp/ccHcnfMO.o /tmp/ccl5hwKR.s`。此时汇编器使用的`ccl5hwKR.s`汇编代码文件是第二部分`ccl`程序编译`main.c`(编译时输入的第一个源代码文件)源代码文件产生的汇编代码文件。这个操作让我感到很迷惑，实际上，我们输入的第一个C源代码文件`main.c`是最后一个被汇编成为可重定位目标文件的。
+
+接着，我们看到gcc使用了一个`collect2`的程序，该程序是gcc用来在开始链接时整理各种初始化函数。它用来在初次链接程序时，在链接器的输出中查找标识函数名字为构造函数的符号，它将创建一个临时的`.c`文件，该文件包含了这些函数的一张表，然后编译该文件，并在第二次链接的过程中加入新编译的可重定位目标文件，并链接到目标程序(示例中是prog程序)。
+
+回到`collect2`程序，我们看到了该程序使用了许多参数, 我们仅关注一部分选项。其中`-m`选项指定了目标文件的架构，这里我们看到为`-m elf_x86_64`, `--hash-style=gnu`选项指定使用gnu的hash风格，`.gnu_hash`节与该选项有关，简单来讲就是GNU使用了布隆过滤器来存储函数的信息。对于一个函数符号，GNU会对该函数名字进行多个不同的hash运算，并将这些hash结果存储在布隆过滤器中，当程序需要根据函数的名称来获得函数的地址时(比如dlsym函数，或者延迟绑定技术)，GNU会对函数名字进行hash运算，以此来判断需要查找的函数是否存在。需要注意的是，由于布隆过滤器的特性，当传入一个函数名称字符串时，GNU只能通过该机制判断该函数一定不存在，或者该函数可能存在。还有一个选项是`-dynamic-linker /lib64/ld-linux-x86_64.so.2`，该选项是gcc用来指定要使用的动态链接器，它是一个链接器程序，用来加载共享库，或者修复符号引用。`-pie` 选项指定使用`Position Independent Executable(PIE)`技术，在最后一节详细讨论该技术。接下来gcc会调用链接器程序，按照顺序链接它们，最终形成`prog`可执行目标文件。
+
+下面展示了链接时的顺序：
+1. /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o 
+2. /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o 
+3. /usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o 
+4. -L/usr/lib/gcc/x86_64-linux-gnu/13 
+5. -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu 
+6. -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib 
+7. -L/lib/x86_64-linux-gnu -L/lib/../lib 
+8. -L/usr/lib/x86_64-linux-gnu 
+9. -L/usr/lib/../lib 
+10. -L/usr/lib/gcc/x86_64-linux-gnu/13/../../.. 
+11. /tmp/cc0mohgi.o 
+12. /tmp/ccT316qm.o 
+13. /tmp/ccsjVhIT.o 
+14. /tmp/ccHcnfMO.o 
+15. -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state 
+16. /usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o 
+17. /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o
+
+最开始的三个文件和最后的两个文件是gcc提供的，可以看到它们按照一一对应的顺序被连接到程序中，链接器按照crti.o, crtbeginS.o顺序链接，而在最后按照ctrendS.o crtn.o的顺序收尾。
+`-L` 选项告诉gcc在这些路径下搜索头文件。
+接着是由我们源代码被编译出的可重定位目标文件，它们按照sum.c multvec.c addvec.c main.c 的顺序被添加到链接器的参数中。回顾一下我们的命令`gcc -v -Og -o prog main.c sum.c multvec.c addvec.c`，我们可以看到我们输入的第一个参数main.c是最后一个被链接的，而main.c后面的文件是按照顺序依次被添加到链接器的输入参数中。
+`-lgcc`, `-lgcc_s` 和 `-lc` 选项告诉gcc使用libgcc, libgcc_s 和 libc 库。
+最后添加`crtendS.o`和`crtn.o`文件。
+当链接器执行完毕，我们就得到了我们的可执行目标文件`prog`，在命令行上输入下面这条命令即可执行我们刚得到的文件：
+```
+linux> ./prog
+```
 
 ### 二进制文件
 
@@ -413,10 +474,10 @@ typedef struct {
 
 最后，将链接编辑器的内部符号表添加到要创建的映像的符号表中。
 
+在符号解析阶段，链接器从左到右按照它们在在命令行出现的顺寻来扫描可重定位目标文件和库。
 
-### 静态链接
+### 重定位
 
-### 动态链接
 
 ## 进阶部分
 
@@ -1824,19 +1885,21 @@ typedef struct {
 1. **The C Preprocessor** https://gcc.gnu.org/onlinedocs/cpp.pdf
 2. **GNU Compiler Collection** https://en.wikipedia.org/wiki/GNU_Compiler_Collection
 3. **How Initialization Functions Are Handled** https://gcc.gnu.org/onlinedocs/gccint/Initialization.html
+4. **collect2** https://gcc.gnu.org/onlinedocs/gccint/Collect2.html
 
 ## 可执行文件
 
 1. **PE Format** https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
 2. **An In-Depth Look into the Win32 Portable Executable File Format** https://learn.microsoft.com/en-us/archive/msdn-magazine/2002/february/inside-windows-win32-portable-executable-file-format-in-detail
 
-## 静态链接
-
-1. **GNU 链接脚本0 - 链接脚本基本介绍** https://zhuanlan.zhihu.com/p/363308789
 
 ## 符号解析
 
 1. **Oracle链接程序与库指南 - 符号处理** https://docs.oracle.com/cd/E26926_01/html/E25910/chapter2-90421.html#chapter2-93321
+
+## 再次回顾链接
+
+1. **GNU 链接脚本0 - 链接脚本基本介绍** https://zhuanlan.zhihu.com/p/363308789
 
 ## 源代码
 
