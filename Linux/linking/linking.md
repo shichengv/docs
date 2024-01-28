@@ -1901,35 +1901,35 @@ $13 = 0x55555555450d "addvec"
 
 # References:
 
-## 编译过程
+**编译过程**
 
 1. **The C Preprocessor** https://gcc.gnu.org/onlinedocs/cpp.pdf
 2. **GNU Compiler Collection** https://en.wikipedia.org/wiki/GNU_Compiler_Collection
 3. **How Initialization Functions Are Handled** https://gcc.gnu.org/onlinedocs/gccint/Initialization.html
 4. **collect2** https://gcc.gnu.org/onlinedocs/gccint/Collect2.html
+5. **GNU 链接脚本0 - 链接脚本基本介绍** https://zhuanlan.zhihu.com/p/363308789
 
-## 可执行文件
+**可执行文件**
 
 1. **PE Format** https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
 2. **An In-Depth Look into the Win32 Portable Executable File Format** https://learn.microsoft.com/en-us/archive/msdn-magazine/2002/february/inside-windows-win32-portable-executable-file-format-in-detail
 
 
-## 符号解析
+**符号解析**
 
 1. **Oracle链接程序与库指南 - 符号处理** https://docs.oracle.com/cd/E26926_01/html/E25910/chapter2-90421.html#chapter2-93321
 
-## 再次回顾链接
 
-1. **GNU 链接脚本0 - 链接脚本基本介绍** https://zhuanlan.zhihu.com/p/363308789
 
-## 源代码
+**源代码**
 
 1. **glibc elf目录** https://codebrowser.dev/glibc/glibc/elf/
 
-## PIC
+**PIC**
+
 1. **What is the difference between got and got plt section** https://stackoverflow.com/questions/11676472/what-is-the-difference-between-got-and-got-plt-section
 
-## 参考书籍
+**参考书籍**
 
 1. **Windows内核原理与实现**
 2. **深入理解计算机系统**
