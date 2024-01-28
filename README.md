@@ -14,8 +14,8 @@
 
 ## Windows 
 ***
-- [ ] [Windows Architecture Overview](./Windows/Internals/Architecture.md)
-  在阅读其他关于Windows内核的文章之前，您应该先阅读本篇。本篇简单介绍了Windows系统的结构，以及Windows内部的构成，以及它们的作用。
+- [x] [Windows Architecture Overview](./Windows/Internals/Architecture.md)
+  在阅读其他关于Windows内核的文章之前，您应该先阅读本篇。本篇简单介绍了Windows系统的结构，以及Windows内部的构成，以及它们的作用。随便写了一点东西，需要详细了解的话推荐看《Windows Internals》
 
 - [x] [Windows 对象管理](./Windows/ObjectManagement/ObjectManagement.md)
   分析Windows内核的对象管理机制，其中参考了《Windows内核原理与实现》。
