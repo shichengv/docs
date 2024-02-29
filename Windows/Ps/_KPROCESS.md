@@ -441,3 +441,45 @@ nt!_EPROCESS
     [+0x040] ActualEntry      [Type: unsigned char [32]]
     [+0x060] DebugInfo        : 0x0 [Type: _HANDLE_TRACE_DEBUG_INFO *]
 ```
+```
+PAGE:00000001404CD66C                               ; ---------------------------------------------------------------------------
+PAGE:00000001404CD66E                               algn_1404CD66E:                         ; DATA XREF: .pdata:00000001403836F8↑o
+PAGE:00000001404CD66E CC CC                         align 10h
+PAGE:00000001404CD670                               ; [00000020 BYTES: BEGIN OF RANGE Node #0. PRESS KEYPAD "-" TO COLLAPSE]
+PAGE:00000001404CD670
+PAGE:00000001404CD670                               ; =============== S U B R O U T I N E =======================================
+PAGE:00000001404CD670
+PAGE:00000001404CD670
+PAGE:00000001404CD670                               ; _BYTE *__fastcall PspReferenceCidTableEntry(__int64, char)
+PAGE:00000001404CD670                               PspReferenceCidTableEntry proc near     ; CODE XREF: PsLookupProcessByProcessId+24↑p
+PAGE:00000001404CD670                                                                       ; PsLookupThreadByThreadId+24↑p
+PAGE:00000001404CD670                                                                       ; DATA XREF: .rdata:00000001402BF1A0↑o
+PAGE:00000001404CD670                                                                       ; .rdata:00000001402BF1BC↑o
+PAGE:00000001404CD670                                                                       ; .rdata:00000001402BF1D0↑o
+PAGE:00000001404CD670                                                                       ; .rdata:00000001402BF1EC↑o
+PAGE:00000001404CD670                                                                       ; .rdata:00000001402BF208↑o
+PAGE:00000001404CD670                                                                       ; .pdata:0000000140383704↑o
+PAGE:00000001404CD670
+PAGE:00000001404CD670                               var_18= qword ptr -18h
+PAGE:00000001404CD670                               var_10= qword ptr -10h
+PAGE:00000001404CD670                               arg_0= qword ptr  8
+PAGE:00000001404CD670                               arg_8= qword ptr  10h
+PAGE:00000001404CD670                               arg_10= qword ptr  18h
+PAGE:00000001404CD670                               arg_18= qword ptr  20h
+PAGE:00000001404CD670
+PAGE:00000001404CD670                               ; FUNCTION CHUNK AT PAGE:00000001405DA1CC SIZE 00000042 BYTES
+PAGE:00000001404CD670
+PAGE:00000001404CD670 48 89 6C 24 20                mov     [rsp+arg_18], rbp
+PAGE:00000001404CD675 56                            push    rsi
+PAGE:00000001404CD676 48 83 EC 30                   sub     rsp, 30h
+PAGE:00000001404CD67A 48 8B 05 BF AC ED FF          mov     rax, cs:PspCidTable
+PAGE:00000001404CD681 0F B6 EA                      movzx   ebp, dl
+PAGE:00000001404CD684 F7 C1 FC 03 00 00             test    ecx, 3FCh
+PAGE:00000001404CD68A 0F 84 6A 01 00 00             jz      loc_1404CD7FA
+PAGE:00000001404CD68A
+PAGE:00000001404CD68A                               ; [00000020 BYTES: END OF RANGE Node #0. PRESS KEYPAD "-" TO COLLAPSE]
+PAGE:00000001404CD690 48 8B D1                      mov     rdx, rcx
+PAGE:00000001404CD693 48 8B C8                      mov     rcx, rax
+PAGE:00000001404CD696 E8 E5 6E 00 00                call    ExpLookupHandleTableEntry
+PAGE:00000001404CD696
+```

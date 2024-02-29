@@ -6,7 +6,72 @@
 
 本篇实验机器为`x86_64`架构的Linux系统，所使用的`Glibc`库版本为`2.37`。所用到的调试工具为`pwndbg`，该工具是`gdb`的一个插件，该插件非常方便。反汇编程序的时候再也不用去看`AT&T`格式汇编了(虽然我对这个风格没什么意见，不过大多数平时接触的还是Intel风格汇编)，值得一提的是，该插件也兼容一小部分WinDbg命令，比如最常用的`e*`, `d*`和`bp`等。
 
-`src`文件夹包含了本篇所用到的全部源代码: `main.c`, `vector.h`, `addvec.c`, `multvec.c`, `sum.c` 和 `main2.c`。
+`src`文件夹包含了本篇所用到的全部源代码: `main.c`, `vector.h`, `addvec.c`, `multvec.c`, `sum.c` 和 `main2.c`。**强烈建议您在阅读过程中手动尝试本文中进行的操作。**
+
+**main.c**
+```c
+/*    main.c    */
+
+#include "vector.h"
+#define MAX 2
+
+int sum(int *a, int n);
+int x[MAX] = {1, 2};
+int y[MAX] = {3, 4};
+int z[MAX];
+long bss;
+
+int main(){
+        addvec(x, y, z, MAX);
+        bss = sum(z, MAX);
+        return bss;
+}
+```
+**sum.c**
+```c
+/*    sum.c    */
+
+int sum(int * a, int n){
+    int i, s = 0;
+    for (i = 0; i < n; i++){
+        s += a[i];
+    }
+    return s;
+}
+```
+**addvec.c**
+```c
+/*    addvec.c    */
+
+int addcnt = 0;
+
+void addvec(int *x, int *y, int *z, int n){
+    int i;
+    addcnt++;
+    for (i = 0; i < n; i++) 
+        z[i] = x[i] + y[i];
+
+}
+```
+**multvec.c**
+```c
+/* multvec.c */
+
+int multcnt = 0;
+void multvec(int *x, int *y, int *z, int n){
+    int i;
+    multcnt++;
+    for (i = 0; i < n; i++)
+        z[i] = x[i] * y[i];
+}
+```
+**vector.h**
+```c
+/*    vector.h    */
+
+void addvec(int *x, int *y, int *z, int n);
+void multvec(int *x, int *y, int *z, int n);
+```
 
 ## 基础部分
 
@@ -22,6 +87,7 @@ main.c包含了 vector.h 文件，改头文件提供了两个函数声明。addv
 ```bash
 gcc -Og -o prog main.c sum.c multvec.c addvec.c
 ```
+`-Og` 选项告诉编译器不使用优化。
 
 gcc 主要使用了4个工具`cpp`, `ccl`, `as` 和 `ld`。
 
@@ -82,7 +148,7 @@ linux> tree -if /usr/libexec/gcc
 /usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper
 ```
 
-接着 汇编器(as)会将汇编文件翻译成一个**可重定位**目标文件。
+接着 汇编器(as)会将汇编文件翻译成一个**可重定位**目标文件。(下面介绍一点汇编的基础，看不懂的可以暂时跳过)
 
 ```
 as -o main.o main.s && as -o sum.o sum.s && as -o addvec.o addvec.s && as -o multvec.o multvec.s  
@@ -277,6 +343,9 @@ COLLECT_GCC_OPTIONS='-v' '-Og' '-o' 'prog' '-mtune=generic' '-march=x86-64' '-du
 接着是由我们源代码被编译出的可重定位目标文件，它们按照sum.c multvec.c addvec.c main.c 的顺序被添加到链接器的参数中。回顾一下我们的命令`gcc -v -Og -o prog main.c sum.c multvec.c addvec.c`，我们可以看到我们输入的第一个参数main.c是最后一个被链接的，而main.c后面的文件是按照顺序依次被添加到链接器的输入参数中。
 `-lgcc`, `-lgcc_s` 和 `-lc` 选项告诉gcc使用libgcc, libgcc_s 和 libc 库。
 最后添加`crtendS.o`和`crtn.o`文件。
+
+对于链接器输入文件处理可以参考 **输入文件处理** - https://docs.oracle.com/cd/E26926_01/html/E25910/chapter2-55859.html#scrolltoc
+
 当链接器执行完毕，我们就得到了我们的可执行目标文件`prog`，在命令行上输入下面这条命令即可执行我们刚得到的文件：
 ```
 linux> ./prog
@@ -289,17 +358,17 @@ linux> ./prog
 
 一种比较早的可执行文件格式为COFF(Common Object File Format)。这是UNIX(AT&T UNIX SystemV)中引入的用于描述二进制目标文件的格式规范。尽管 COFF 为目标文件定义了一个很好的框架，比如以前的 a.out 格式改进了很多，但它仍然有一些限制，比如文件中段(section)的数量有最大限制，段的名称也有长度限制，无法支持像 C++语言所需要的符号化调试信息等。因此，每一个采用 COFP 的操作系统厂商几乎都或多或少地对其进行了扩展，Windows的 PE(Portable Executable) 格式扩展了 COFF，AT&T自己又在COFF基础上定义了 ELF (Extensible Linking Format)，ELF 目前被广泛用于各种UNIX 类操作系统，包括 Linux 和 FreeBSD; IBM在AIX中使用 XCOFF; 而Microsoft 则在COFF 格式规范基础上定义了PE 格式。在 Windows 平台上，可执行文件(扩展名为.exe)、目标文件(扩展名为.obj)、动态链接库(扩展名为.dll)以及设备驱动程序(扩展名为.sys)等多种文件类型使用了PE 文件格式。随着 64 位系统的到来，PE文件格式也相应地有了一个扩展的版本，称为 PE32+，允许使用 64 位地址空间。
 
-下面是两张图详细展示了ELF文件与PE文件的结构：
+下面是两张图详细展示了ELF文件与PE文件的结构[看不懂也无关紧要，给大佬们复习用的，后面的部分会详细介绍这张图]：
 
 ![elf](./img/ELF_101_linux_executable_walk-through.png)
 
 ![PE](./img/PE.png)
 
-可以看到，无论是ELF或者PE，它们有着类似的设计。头, 节表 和 节。
+可以看到，无论是ELF或者PE，它们有着类似的设计: 头, 节表 和 节。
 
 **头**
 
-头用来存储该文件的一些基本信息，比如 魔术码，版本号，类型，入口地址(非常重要)等。操作系统的加载器需要读取头的信息，根据头的信息来确定如何加载该文件，如何执行该文件。
+头用来存储该文件的一些基本信息，比如 魔术码，版本号，类型，**入口地址 Entry point address** 等。操作系统的加载器需要读取头的信息，根据头的信息来确定如何加载该文件，如何执行该文件。
 
 可以使用readelf工具来查看ELF文件的头，Windows的PE可以使用`CFF Explorer`等其他工具。
 
@@ -330,7 +399,7 @@ ELF Header:
 
 ```
 
-可以看到`Entry point address`的值为 0x1040，该值加上程序映射在内存中的基地址就是程序的起始位置。接下来，我将使用gdb来验证这个过程。
+可以看到`Entry point address`的值为 0x1040，该值加上程序映射在内存中的基地址就是程序的起始位置。下面使用gdb来验证这个过程(初学者可以简单看下，看不懂也没关系，以后了解的多了再回过头来就能明白啦) 。
 ```
 > gdb prog
 pwndbg> info files
@@ -360,7 +429,7 @@ pwndbg> disass _start
 Dump of assembler code for function _start:
    0x0000555555555040 <+0>:     xor    ebp,ebp
 ```
-当程序被映射到内存中，将要执行的第一条指令的位置就是0x0000555555555040。
+当程序被映射到内存中，将要执行的第一条指令的位置就是0x0000555555555040 = 0x555555554000 + Entry point address 。
 
 **节表**
 
@@ -368,8 +437,8 @@ Dump of assembler code for function _start:
 - `.text`：已编译程序的机器代码。
 - `.rodata`：只读数据。比如C代码`char * sz = "hello, world\n";`，`"hello, world\n`就存放在该节中。
 - `.data`：已初始化的全局和静态C变量.局部C变量在运行时被保存在栈中，既不出现在.data节中，也不出现在.bss节中.
-- `.bss`：未初始化的全局和静态C变量，以及所有被初始化为0的全局或静态变量。在目标文件中这个节不占据实际的空间，它仅仅是一个占位符.目标文件格式区分已初始化和未初始化变量是为了空间效率:在目标文件中，未初始化变量不需要占据任何实际的磁盘空间.运行时，在内存中分配这些变量，初始值为0.
-- `.symtab`：一个符号表，它存放在程序中定义和引用的函数和全局变量的信息.一些程序员错误地认为必须通过-g选项来编译一个程序，才能得到符号表信息.实际上，每个可重定位目标文件在符号中都有一张符号表(除非程序员特意用条命令去掉(它)。然而，和编译器中的符号表不同，.symtab符号表不包含局部变量的条目.
+- `.bss`：未初始化的全局和静态C变量，以及所有被初始化为0的全局或静态变量。在目标文件中这个节不占据实际的空间，它仅仅是一个占位符.目标文件格式区分已初始化和未初始化变量是为了空间效率:在目标文件中，未初始化变量不需要占据任何实际的磁盘空间[现在的GCC可能会为该节分配合适的磁盘空间，通过二进制分析工具查看该节确实有明确的大小信息，关于.bss节倒底占不占用磁盘空间这里就不深入探讨了。].运行时，在内存中分配这些变量，初始值为0.
+- `.symtab`：一个符号表，它存放在程序中定义和引用的函数和全局变量的信息.一些程序员错误地认为必须通过-g选项来编译一个程序，才能得到符号表信息.实际上，每个可重定位目标文件在符号中都有一张符号表(除非程序员特意用条命令去掉它)。然而，和编译器中的符号表不同，.symtab符号表不包含局部变量的条目.
 - `.rel.text`：一个.text节中位置的列表，当链接器把这个目标文件和其他文件组合时，需要修改这些位置.一般而言，任何调用外部函数或者引用全局变量的指令都需要修改.另一方面，调用本地函数的指令则不需要修改.注意，可执行目标文件中并不需要重定位信息，因此通常省略，除非用户显式地指示链接器包含这些信息.
 - `.rel.data`：被模块引用或定义的所有全局变量的重定位信息.一般而言，任何已初始化的全局变量，如果它的初始值是一个全局变量地址或者外部定义函数的地址，都需要被修改.
 - `.debug`：一个调试符号表，其条目是程序中定义的局部变量和类型定义，程序中定义和引用的全局变量，以及原始的 C 源文件。只有以-g 选项调用编译器驱动程序时，才会得到这张表。
@@ -450,29 +519,123 @@ Local exec file:
 ```
 可以看到，`.text`节被加载到了 `0x0000555555555040 - 0x00005555555551cc` 的地方。
 
-### 符号解析
+**静态库**
 
-每个可重定位目标模块都有一张符号表`.symtab`，，它包含当前模块定义和引用的符号的信息。在链接器上下文中，有三种不同的符号：
-- 由当前模块定义并能被其他模块引用的全局符号，全局链接器符号对于**非静态的C函数和全局变量**。
-- 由其他模块中定义的并被当前模块引用的全局符号。这些符号也被称为外部符号，对应于其他模块中定义的非静态C函数和全局变量。
-- 只被当前模块定义和引用的局部符号。它们对应于带static属性的C函数和全局变量。这些符号在当前模块中任何位置都可见，但是不能被其他模块引用。
+除开常见的动态库(linux的 `.so` 文件，windows的`.dll`文件)。还有静态库。可以使用下面的命令将一组可重定位目标文件封装成一个静态库。
+```
+linux> ar rcs libvector.a addvec.o multvec.o
+```
+同样，也可以使用`readelf`工具来查看一个静态库的信息，有兴趣的可以自己研究，这里不过多赘述。
+链接器在解析静态库构造可执行目标文件时，它会解析程序和静态库的符号信息(下一节介绍)，然后只复制静态库中被程序引用的符号所对应的数据或代码到可执行目标文件当中。
 
-目标文件的符号表包含定位和重定位程序的符号定义和符号引用所需的信息。符号表索引是此数组的下标。索引 0 指定表中的第一项并用作未定义的符号索引。
+有关静态库的更多信息可以查看《深入理解计算机系统》的7.6.2和7.6.3节。
+
+### 符号解析 
+
+在上一节已经简单介绍过可重定位目标文件的`.symtab`节，每个可重定位目标模块都有一张符号表`.symtab`，，它包含当前模块定义和引用的符号的信息。在链接器上下文中，有三种不同的符号：
+
+- 已定义的：
+  - 文件中已经创建并且分配存储地址和空间的符号。它们是由当前模块定义并能被其他模块引用的全局符号，全局链接器符号对于**非静态的C函数和全局变量**。
+  - 只被当前模块定义和引用的局部符号。它们对应于带static属性的C函数和全局变量。这些符号在当前模块中任何位置都可见，但是不能被其他模块引用。
+- 暂定的：文件中已创建但尚未指定大小或分配存储空间的符号。比如未初始化的全局和静态C变量，以及所有被初始化为0的全局或静态变量。
+- 未定义的：文件中已引用但尚未指定存储地址的符号。它们是由其他模块中定义的并被当前模块引用的全局符号。这些符号也被称为外部符号，对应于其他模块中定义的非静态C函数和全局变量。
+
+目标文件的符号表包含定位和重定位程序的符号定义和符号引用所需的信息。符号表索引是此数组的下标。索引 0 指定表中的第一项并用作未定义的符号索引。`.symtab`节是一个 `Elf64_Sym` 结构体数组，该数据结构记录了每一个符号的详细信息。
 
 ```c
 typedef struct {
-        Elf64_Word      st_name;
-        unsigned char   st_info;
-        unsigned char   st_other;
-        Elf64_Half      st_shndx;
-        Elf64_Addr      st_value;
-        Elf64_Xword     st_size;
-} Elf64_Sym;
+        Elf64_Word      st_name;    // 0x4 bytes
+        unsigned char   st_info;    // 0x1 bytes
+        unsigned char   st_other;   // 0x1 bytes
+        Elf64_Half      st_shndx;   // 0x2 bytes
+        Elf64_Addr      st_value;   // 0x8 bytes
+        Elf64_Xword     st_size;    // 0x8 bytes
+} Elf64_Sym;  // 0x18 bytes
 ```
 
-在输入文件处理期间，输入可重定位目标文件中的所有局部符号都将传递到输出文件映像。输入可重定位目标文件的所有全局符号以及共享目标文件依赖项的所有全局符号都在链接编辑器内部累积。
+`st_name` : 目标文件的符号字符串表的索引，其中包含符号名称的字符表示形式。
+`st_info` : 符号的类型和绑定属性。
+`st_other` : 符号的可见性。
+`st_shndx` : 所定义的每一个符号表项都与某节有关。此成员包含相关节头表索引。部分节索引会表示特殊含义。
+`st_value` : 关联的符号的值。
+`st_size` : 许多符号具有关联大小。例如，数据目标文件的大小是目标文件中包含的字节数。如果符号没有大小或大小未知，则此成员值为零。
 
-可以在此内部符号表中搜索输入文件提供的每个全局符号。如果遇到与上一个输入文件中名称相同的符号，则将调用符号解析过程。此符号解析过程决定保留可重定位目标文件两项中的哪一项。此解析过程还会决定共享目标文件依赖项外部引用的建立方式。
+```
+linux> cat sym0.c            
+extern long u_l_data;
+
+int d_i_data = 5;
+
+int d_i_bss0 = 0;
+int d_i_bss1;
+static int d_i_bss2;
+
+int d_f_text(){
+        return u_l_data;
+}
+
+int main(){
+        return d_f_text();
+}
+
+linux> readelf -s sym0.o
+
+Symbol table '.symtab' contains 10 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+     1: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS sym0.c
+     2: 0000000000000000     0 SECTION LOCAL  DEFAULT    1 .text
+     3: 0000000000000008     4 OBJECT  LOCAL  DEFAULT    4 d_i_bss2
+     4: 0000000000000000     4 OBJECT  GLOBAL DEFAULT    3 d_i_data
+     5: 0000000000000000     4 OBJECT  GLOBAL DEFAULT    4 d_i_bss0
+     6: 0000000000000004     4 OBJECT  GLOBAL DEFAULT    4 d_i_bss1
+     7: 0000000000000000    13 FUNC    GLOBAL DEFAULT    1 d_f_text
+     8: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND u_l_data
+     9: 000000000000000d    16 FUNC    GLOBAL DEFAULT    1 main
+
+linux> readelf --sections sym0.o
+There are 12 section headers, starting at offset 0x298:
+
+Section Headers:
+  [Nr] Name              Type             Address           Offset
+       Size              EntSize          Flags  Link  Info  Align
+  [ 0]                   NULL             0000000000000000  00000000
+       0000000000000000  0000000000000000           0     0     0
+  [ 1] .text             PROGBITS         0000000000000000  00000040
+       000000000000001b  0000000000000000  AX       0     0     1
+  [ 2] .rela.text        RELA             0000000000000000  000001f0
+       0000000000000018  0000000000000018   I       9     1     8
+  [ 3] .data             PROGBITS         0000000000000000  0000005c
+       0000000000000004  0000000000000000  WA       0     0     4
+  [ 4] .bss              NOBITS           0000000000000000  00000060
+       000000000000000c  0000000000000000  WA       0     0     4
+  [ 5] .comment          PROGBITS         0000000000000000  00000060
+       000000000000001f  0000000000000001  MS       0     0     1
+  [ 6] .note.GNU-stack   PROGBITS         0000000000000000  0000007f
+       0000000000000000  0000000000000000           0     0     1
+  [ 7] .eh_frame         PROGBITS         0000000000000000  00000080
+       0000000000000058  0000000000000000   A       0     0     8
+  [ 8] .rela.eh_frame    RELA             0000000000000000  00000208
+       0000000000000030  0000000000000018   I       9     7     8
+  [ 9] .symtab           SYMTAB           0000000000000000  000000d8
+       00000000000000d8  0000000000000018          10     3     8
+  [10] .strtab           STRTAB           0000000000000000  000001b0
+       000000000000003a  0000000000000000           0     0     1
+  [11] .shstrtab         STRTAB           0000000000000000  00000238
+       0000000000000059  0000000000000000           0     0     1
+```
+
+符号表的第一项(索引0的那一项)用作未定义的符号索引。
+
+我们定义了 `d_f_text` 函数，该函数的Ndx的值为1，main函数与它相同，其中 1 即 `.text`代码段 在Sections中的索引。而`d_i_data`符号，它的Ndx为3，也就是`.data`段。在代码中
+```c
+int d_i_bss0 = 0;
+int d_i_bss1;
+static int d_i_bss2;
+```
+它们的Ndx都为4，存储在`.bss`节。可以看到初始化为0的全局变量与未初始化的全局变量都存储在`.bss`节。在代码中引用了`u_l_data`，它的Ndx为`UND`，未定义符号。链接编辑器将此目标文件与用于定义所表示的符号的另一目标文件合并时，此文件中对该符号的引用将与该定义绑定。注意 `d_i_bss2` 与其他符号的Bind字段的区别，`d_i_bss2`的符号属性是`LOCAL`，它是一个局部符号。
+
+在输入文件处理期间，输入可重定位目标文件中的所有局部符号都将传递到输出文件映像。输入可重定位目标文件的所有全局符号以及共享目标文件依赖项的所有全局符号都在链接编辑器内部累积到一张"内部符号表"中。链接器可以在此内部符号表中搜索输入文件提供的每个全局符号。如果遇到与上一个输入文件中名称相同的符号，则将调用符号解析过程。此符号解析过程决定保留可重定位目标文件两项中的哪一项。此解析过程还会决定共享目标文件依赖项外部引用的建立方式。
 
 完成输入文件处理后，如果没有发生符号解析致命错误，链接编辑器会决定是否保留任何未解析的符号引用。未解析的符号引用可能导致链接编辑终止。
 
@@ -480,12 +643,120 @@ typedef struct {
 
 在符号解析阶段，链接器从左到右按照它们在在命令行出现的顺寻来扫描可重定位目标文件和库。
 
+符号解析的方式很广，有简单直观的，也有错综复杂的。大多数解析由链接编辑器执行，且没有任何提示。但是，某些重定位可能伴随有警告诊断，而某些可能导致致命错误状态。
+
+最常见的简单解析方式需要将一个目标文件中的符号引用与另一个目标文件中的符号定义绑定起来。此种绑定可用于两个可重定位目标文件之间，也可用于一个可重定位目标文件与在共享目标文件依赖项中找到的第一个定义之间。复杂解析方式通常用于两个或多个可重定位目标文件之间。
+
+形式最简单的符号解析需要使用优先级关系。此关系中，已定义符号优先于暂定符号，而暂定符号又优先于未定义符号。
+
+> 关于 已定义的 和 暂定的 符号区别其实并不是很明显，即使在.bss节也占用着实际的磁盘空间。如果 foo1.c 文件定义了 `int foo;`，而foo2.c文件定义了`int foo = 5;`。此时链接器并不会提示警告，而是直接抛出一条错误。这种情况是不被允许的。
+
+下面的两个实例说明了这种情况
+```
+linux> cat sym1.c
+#include <stdio.h>
+int d_i_foo1;
+int d_i_foo2;
+int d_i_foo3;
+int d_i_bar;
+
+int d_f_foo(){
+        return printf("%d\n", d_i_bar);
+}
+int main()
+{
+        return d_f_foo();
+}
+linux> cat sym2.c
+int d_i_bar = 5;
+linux> ld -r -o insert insert_sym_1.o insert_sym_2.o
+ld: insert_sym_2.o:(.data+0x0): multiple definition of `d_i_bar'; insert_sym_1.o:(.bss+0xc): first defined here
+```
+
+```                                        
+# cat sym3.c 
+#include <stdio.h>
+extern int d_i_bar;
+int d_i_bar;
+
+int d_f_foo(){
+        return printf("%d\n", d_i_bar);
+}
+int main()
+{
+        return d_f_foo();
+}
+```
+
+我们在此引用了外部符号 `d_i_bar`，接着又定义了`d_i_bar`，如果编译该文件，gcc将不会输出任何提示。如果运行该程序，得到的结果结果为0。这是由于未初始化的全局变量符号优先级比未定义的符号优先级要高，而在程序加载时，加载器会为其分配合适的空间。新分配的空间一般情况下默认全部为0。
+
+```
+linux> cat sym4.c            
+int data[2] = { 1, 2};
+
+linux> cat sym5.c
+double data;
+
+linux> cc -o sym5.o -c sym5.c
+
+linux> cc -o sym4.o -c sym4.c
+
+linux> ld -r -o tmpsym45 sym5.o sym4.o         
+ld: sym4.o:(.data+0x0): multiple definition of `data'; sym5.o:(.bss+0x0): first defined here
+
+linux> ld -r -o tmpsym45 sym4.o sym5.o         
+ld: sym5.o:(.bss+0x0): multiple definition of `data'; sym4.o:(.data+0x0): first defined here
+```
+
+上面的的示例可以看到，即使sym5.c文件中的data只是一个未初始化的全局变量，链接器仍然执行简单解析，直接抛出错误，而不是再经过复杂解析生成警告。如果需要强行链接，则需要使用`-z muldefs`选项。
+```
+linux> ld -z muldefs -r -o tmpsym45 sym5.o sym4.o
+```
+
+如果想让ld链接器程序忽略一些错误，强行生成文件，有以下几种可能的方法：
+
+`-z nodefaultlib`选项，可以让ld不链接默认的库文件，从而避免一些未定义引用的错误。
+`-z muldefs`选项，可以让ld忽略多重定义的符号，只使用第一个出现的定义。
+`-z nodynamic-undefined-weak`选项，可以让ld不检查动态链接的弱符号是否未定义。
+`-z relax`选项，可以让ld放宽一些对符号的约束，例如允许弱符号覆盖强符号。
+`-z now`选项，可以让ld在加载时解析所有符号，而不是延迟到运行时。
+
+以上方法都有一定的风险，可能会导致程序运行时出现异常或崩溃，所以建议您在使用前仔细阅读ld的手册。
+
 ### 重定位
+
+一旦链接器完成了符号解析这一步，就把代码中的每个符号引用和正好一个符号定义(即它的一个输入目标模块中的一个符号表条目)关联起来。此时，链接器就知道它的输入目标模块中的代码节和数据节的确切大小。现在就可以开始重定位步骤了，在这个步骤中，将合并输人模块，并为每个符号分配运行时地址。重定位由两步组成:
+
+- **重定位节和符号定义**  在这一步中，链接器将所有相同类型的节合并为同一类型的新的聚合节。例如，来自所有输人模块的.data节被全部合并成一个节，这个节成为输出的可执行目标文件的.data节。然后，链接器将运行时内存地址赋给新的聚合节，赋给输人模块定义的每个节，以及赋给输人模块定义的每个符号。当这一步完成时，程序中的每条指令和全局变量都有唯-的运行时内存地址了。
+- **重定位节中的符号引用**  在这一步中，链接器修改代码节和数据节中对每个符号的引用，使得它们指向正确的运行时地址。要执行这一步，链接器依赖于可重定位目标模块中称为重定位条目(relocation entry)的数据结构，我们接下来将会描述这种数据结构。
+
 
 
 ## 进阶部分
 
-接下来重新编译我们的示例
+接下来需要用到另一个文件`main2.c`，并重新编译我们的示例
+**main2.c**
+```c
+/*  main2.c 后面的几节会使用这个例子    */
+#include <dlfcn.h>
+#include "vector.h"
+#define MAX 2
+
+int x[MAX] = {1, 2};
+int y[MAX] = {3, 4};
+int z[MAX];
+long plusd;
+int main(){
+        void * handle;
+        int (*sum)(int*, int);
+        addvec(x, y, z, MAX);
+        handle = dlopen("./libsum.so", RTLD_LAZY);
+        sum = (int (*)(int*, int))dlsym(handle, "sum");
+        plusd = sum(z, MAX);
+        dlclose(handle);
+        return plusd;
+}
+```
 
 ```bash
 gcc -shared -fpic -o libsum.so sum.c && 

@@ -1,5 +1,7 @@
 # Windows Overview
 
+~~大多都是对<Windows Internals>的摘抄翻译，简单看一下就行(bushi)~~
+
 ## Windows内核结构
 操作系统本身属于软件的范畴，但是它需要紧密地跟硬件打交道，它为上层应用软件或应用系统提供了一层抽象，专门负责硬件资源的管理和分配。应用软件不需要直接跟硬件打交道，它们利用操作系统提供的功能来实现各种应用任务，如果它们要访问硬件，则必须通过操作系统提供的抽象接口来完成。
 
@@ -82,6 +84,45 @@ Windows子系统由以下主要的组件组成：
 对于子系统DLL的使用和原生应用程序(不依赖任何特定的子系统的应用程序)来说，Ntdll.dll 是一个特殊的系统支持的库。它封装Windows执行体的系统服务，其他子系统，子系统的DLL，以及原生应用程序使用它提供的函数。
 
 Ntdll.dll提供了一个进入内核模式代码的入口，当我们使用子系统的DLL时，子系统的DLL调用了对应的Ntdll.dll内的函数(比如调用Windows子系统Kernel32.dll的CreateFileEx API，该API实际上调用了Ntdll.dll的NtCreateFile)。Ntdll.dll函数经过参数检查后，系统服务分发器会调用Kernel-Mode的系统服务，这些代码包含在Ntoskrnl.exe中。
+
+**~~Executive~~**
+
+Windows执行体在Ntoskrnl.exe的上层，执行体包含以下函数种类：
+- 可以被用户模式调用的函数 这些函数通过Ntdll.dll导出，被系统服务调用。这些服务的大多数被用来作为Windows API和其他环境子系统的API。
+- 可以通过DeviceIoControl函数调用的设备驱动函数。
+- WDK公开的函数，它们仅能被内核模式调用。
+- WDK未公开的函数，它们仅能被内核模式调用。
+- 定义在全局符号表，但是未公开的函数。
+- 未定义为全局符号的模块内部函数
+执行体层包含以下主要的组件：
+- 配置管理器
+- 进程管理器
+- 安全引用监视器
+- I/O管理器
+- 即插即用管理器(Plug and Play(PnP) Manger)
+- 电源管理器
+- Windows Driver Model (WDM) Windows Management Instrumentation (WMI) routines
+- 内存管理器
+- 缓存管理器
+
+
+***
+
+- 对象管理器
+- Asynchronous LPC(ALPC) facility
+- 运行时库函数
+- 执行体支持的例程
+
+
+***
+- 内核调试库
+- 用户模式调试框架
+- 虚拟机库和VBS库
+- Errata Manager
+- 驱动签名程序
+- Windows事件追踪
+- 
+
 
 # References
 
