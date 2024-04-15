@@ -228,50 +228,6 @@ nt!_OBJECT_TYPE_INITIALIZER
 
 系统有一个全局变量ObpObjectTypes 数组记录了所有已创建的类型，这是一个静态数组，WRK 限定不超过 48 种对象类型。`_OBJECT_TYPE` 中的 `Index` 成员记录了一个类型对象在此数组中的索引。
 
-下面这段代码我并不是很明白，感兴趣的可以了解一下
-
-```c
-//
-//  If we are to use the default object (meaning that we'll have our
-//  private event as our default object) then the type must allow
-//  synchronize and we'll set the default object
-//
-
-if (NewObjectType->TypeInfo.UseDefaultObject) {
-
-    NewObjectType->TypeInfo.ValidAccessMask |= SYNCHRONIZE;
-    NewObjectType->DefaultObject = &ObpDefaultObject;
-
-//
-//  Otherwise if this is the type file object then we'll put
-//  in the offset to the event of a file object.
-//
-
-} else if (ObjectName.Length == 8 && !wcscmp( ObjectName.Buffer, L"File" )) {
-
-    NewObjectType->DefaultObject = ULongToPtr( FIELD_OFFSET( FILE_OBJECT, Event ) );
-
-
-//
-// If this is a waitable port, set the offset to the event in the
-// waitableport object.  Another hack
-//
-
-} else if ( ObjectName.Length == 24 && !wcscmp( ObjectName.Buffer, L"WaitablePort")) {
-
-    NewObjectType->DefaultObject = ULongToPtr( FIELD_OFFSET( LPCP_PORT_OBJECT, WaitEvent ) );
-
-//
-//  Otherwise indicate that there isn't a default object to wait
-//  on
-//
-
-} else {
-
-    NewObjectType->DefaultObject = NULL;
-}
-```
-
 接着就是将该对象类型存储到全局对象类型数组里面：
 
 ```c
@@ -288,8 +244,6 @@ if (NewObjectType->Index < OBP_MAX_DEFINED_OBJECT_TYPES) {
     ObpObjectTypes[ NewObjectType->Index - 1 ] = NewObjectType;
 }
 ```
-
-在WRK中`OBP_MAX_DEFINED_OBJE` 的值为 48，现在的Windows很可能已经改变。
 
 最后，如果`ObpTypeDirectoryObject`全局变量为NULL，则直接将新创建的对象类型赋值给 `_out_ ObjectType` 参数，接着返回`STATUS_SUCCESS`。如果成功将新建的对象类型插入到`\ObjectType\`目录中，那么同样指向上述的过程。最后，`ObCreateObjectType`的调用者就可以使用`ObjectType`来引用新创建好的对象类型了。
 

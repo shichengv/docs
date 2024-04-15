@@ -1,6 +1,6 @@
 # 深入解析Windows句柄
 
-**感谢`Stack Overflow`用户`Neitsa`为我详细解答了<如果通过Windows的句柄来找到对应的对象类型?>**
+**感谢`Stack Overflow`用户`Neitsa`为我详细解答了<如何通过Windows的句柄来找到对应的对象类型?>**
 原贴：https://stackoverflow.com/questions/77814442/how-windows-handle-to-associate-corresponding-object-type
 
 Windows执行体实现了一套对象机制来管理各种资源和实体。每种对象都有一个与之对应的对象类型，对象类型定义了该类对象的一些特性和方法。对象类型通过提供的自定义的Parse方法可以扩展此名字空间。对象管理器中的对象是执行体对象，它们位于系统空间中；在进程空间不能通过地址来引用他们，Windows使用句柄(handle)来管理进程中的对象引用。
